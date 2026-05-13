@@ -1,0 +1,23 @@
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+
+# Node
+node_modules/
+.npm
+.yarn
+yarn-error.log
+npm-debug.log*
+
+# Vite build output
+frontend/dist/
+backend/posawesome/public/dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+tags
