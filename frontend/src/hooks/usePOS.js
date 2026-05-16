@@ -1,7 +1,12 @@
 import { useReducer, useCallback, useMemo } from 'react';
-import { taxRate, customers } from '../data/mockData';
+import { taxRate, customers, items as catalog, defaultSettings } from '../data/mockData';
 
 const walkIn = customers[0];
+
+const initialStock = catalog.reduce((acc, it) => {
+  acc[it.id] = it.stock;
+  return acc;
+}, {});
 
 const initialState = {
   shift: null,             // { id, openedAt, openingBalance, profile }
@@ -12,6 +17,8 @@ const initialState = {
   drafts: [],              // held invoices
   submittedInvoices: [],   // completed invoices for the day
   lastInvoice: null,
+  settings: { ...defaultSettings },
+  stock: { ...initialStock },
 };
 
 function reducer(state, action) {
@@ -20,10 +27,20 @@ function reducer(state, action) {
       return { ...state, shift: action.payload };
 
     case 'CLOSE_SHIFT':
-      return { ...initialState };
+      return { ...initialState, settings: state.settings };
 
-    case 'SET_CUSTOMER':
-      return { ...state, customer: action.payload };
+    case 'UPDATE_SETTINGS':
+      return { ...state, settings: { ...state.settings, ...action.payload } };
+
+    case 'SET_CUSTOMER': {
+      const c = action.payload;
+      const apply = state.settings.applyCustomerDiscount && c?.discount > 0;
+      return {
+        ...state,
+        customer: c,
+        invoiceDiscount: apply ? c.discount : state.invoiceDiscount,
+      };
+    }
 
     case 'ADD_ITEM': {
       const item = action.payload;
@@ -108,10 +125,17 @@ function reducer(state, action) {
 
     case 'SUBMIT_INVOICE': {
       const invoice = action.payload;
+      const nextStock = { ...state.stock };
+      for (const l of invoice.lines) {
+        if (nextStock[l.itemId] != null) {
+          nextStock[l.itemId] = Math.max(0, nextStock[l.itemId] - l.qty);
+        }
+      }
       return {
         ...state,
         submittedInvoices: [invoice, ...state.submittedInvoices],
         lastInvoice: invoice,
+        stock: nextStock,
         customer: walkIn,
         lines: [],
         invoiceDiscount: 0,
@@ -198,15 +222,29 @@ export function usePOS() {
     []
   );
   const clearCart = useCallback(() => dispatch({ type: 'CLEAR_CART' }), []);
+  const updateSettings = useCallback(
+    (patch) => dispatch({ type: 'UPDATE_SETTINGS', payload: patch }),
+    []
+  );
 
   const totals = useMemo(
     () => calcTotals(state.lines, state.invoiceDiscount),
     [state.lines, state.invoiceDiscount]
   );
 
+  const dayTotal = useMemo(
+    () =>
+      state.submittedInvoices.reduce(
+        (s, inv) => s + (inv.totals?.grandTotal || 0),
+        0
+      ),
+    [state.submittedInvoices]
+  );
+
   return {
     state,
     totals,
+    dayTotal,
     openShift,
     closeShift,
     setCustomer,
@@ -221,5 +259,6 @@ export function usePOS() {
     submitInvoice,
     returnInvoice,
     clearCart,
+    updateSettings,
   };
 }

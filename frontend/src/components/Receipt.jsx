@@ -1,12 +1,17 @@
 import { currency, formatDate } from '../utils/format';
 
-// Hidden by default; only visible on window.print() (see index.css @media print).
-export default function Receipt({ invoice }) {
+// Hidden on screen; only visible on window.print() (see index.css).
+export default function Receipt({ invoice, settings }) {
+  const storeName = settings?.storeName || 'POS Awesome';
+  const storeAddress = settings?.storeAddress || '';
+  const footer = settings?.receiptFooter || 'Thank you!';
+  const taxInclusive = settings?.taxInclusive;
+
   return (
-    <div className="receipt-print hidden">
+    <div className="receipt-print">
       <div className="text-center mb-3">
-        <div className="text-lg font-bold">POS Awesome</div>
-        <div className="text-xs">123 Main Street · Anywhere</div>
+        <div className="text-lg font-bold">{storeName}</div>
+        {storeAddress && <div className="text-xs">{storeAddress}</div>}
       </div>
       <div className="text-xs mb-2">
         Invoice: {invoice.id}
@@ -35,7 +40,7 @@ export default function Receipt({ invoice }) {
           <span>{currency(invoice.totals.subtotal)}</span>
         </div>
         <div className="flex justify-between">
-          <span>Tax</span>
+          <span>Tax{taxInclusive ? ' (incl.)' : ''}</span>
           <span>{currency(invoice.totals.tax)}</span>
         </div>
         <div className="flex justify-between font-bold mt-1">
@@ -57,8 +62,14 @@ export default function Receipt({ invoice }) {
             <span>{currency(invoice.change)}</span>
           </div>
         )}
+        {invoice.outstanding > 0 && (
+          <div className="flex justify-between font-semibold mt-1">
+            <span>Outstanding</span>
+            <span>{currency(invoice.outstanding)}</span>
+          </div>
+        )}
       </div>
-      <div className="text-center text-xs mt-3">Thank you!</div>
+      <div className="text-center text-xs mt-3">{footer}</div>
     </div>
   );
 }

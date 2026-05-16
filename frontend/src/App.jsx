@@ -9,14 +9,15 @@ import PaymentScreen from './components/PaymentScreen';
 import CustomerDialog from './components/CustomerDialog';
 import DraftsDialog from './components/DraftsDialog';
 import ReturnsDialog from './components/ReturnsDialog';
+import SettingsDialog from './components/SettingsDialog';
 import Receipt from './components/Receipt';
 
 export default function App() {
   const pos = usePOS();
-  const { state } = pos;
+  const { state, dayTotal } = pos;
 
   const [view, setView] = useState('items'); // 'items' | 'payment'
-  const [openDialog, setOpenDialog] = useState(null); // 'customer' | 'drafts' | 'returns' | 'closing'
+  const [openDialog, setOpenDialog] = useState(null); // 'customer' | 'drafts' | 'returns' | 'closing' | 'settings'
 
   // Keyboard shortcuts mirrored from the original Vue app.
   useEffect(() => {
@@ -45,16 +46,24 @@ export default function App() {
       <Navbar
         shift={state.shift}
         lastInvoice={state.lastInvoice}
+        storeName={state.settings.storeName}
+        dayTotal={dayTotal}
+        dayCount={state.submittedInvoices.length}
         onCloseShift={() => setOpenDialog('closing')}
         onDrafts={() => setOpenDialog('drafts')}
         onReturns={() => setOpenDialog('returns')}
+        onSettings={() => setOpenDialog('settings')}
       />
 
       <main className="flex-1 overflow-hidden p-4">
         <div className="h-full grid grid-cols-12 gap-4">
           <section className="col-span-12 lg:col-span-7 h-full overflow-hidden">
             {view === 'items' ? (
-              <ItemsGrid onAdd={pos.addItem} />
+              <ItemsGrid
+                onAdd={pos.addItem}
+                stockMap={state.stock}
+                settings={state.settings}
+              />
             ) : (
               <PaymentScreen
                 pos={pos}
@@ -121,7 +130,17 @@ export default function App() {
         />
       )}
 
-      {state.lastInvoice && <Receipt invoice={state.lastInvoice} />}
+      {openDialog === 'settings' && (
+        <SettingsDialog
+          settings={state.settings}
+          onChange={pos.updateSettings}
+          onClose={() => setOpenDialog(null)}
+        />
+      )}
+
+      {state.lastInvoice && (
+        <Receipt invoice={state.lastInvoice} settings={state.settings} />
+      )}
     </div>
   );
 }

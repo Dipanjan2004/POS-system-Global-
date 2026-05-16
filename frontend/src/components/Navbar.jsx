@@ -1,17 +1,42 @@
-import { ShoppingCart, FileText, Undo2, Printer, LogOut } from 'lucide-react';
-import { formatDate } from '../utils/format';
+import { ShoppingCart, FileText, Undo2, Printer, LogOut, Settings as SettingsIcon, TrendingUp } from 'lucide-react';
+import { currency, formatDate } from '../utils/format';
 
-export default function Navbar({ shift, lastInvoice, onCloseShift, onDrafts, onReturns }) {
+export default function Navbar({
+  shift,
+  lastInvoice,
+  storeName,
+  dayTotal,
+  dayCount,
+  onCloseShift,
+  onDrafts,
+  onReturns,
+  onSettings,
+}) {
   return (
     <header className="bg-white border-b border-slate-200 shadow-sm">
       <div className="px-4 py-2 flex items-center gap-4">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-lg bg-brand-600 text-white grid place-items-center font-bold">
-            P
+            {storeName?.[0]?.toUpperCase() || 'P'}
           </div>
           <div className="leading-tight">
-            <div className="font-semibold text-slate-900">POS Awesome</div>
+            <div className="font-semibold text-slate-900">{storeName}</div>
             <div className="text-[11px] text-slate-500">{shift.profile}</div>
+          </div>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
+          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 grid place-items-center">
+            <TrendingUp size={16} />
+          </div>
+          <div className="leading-tight">
+            <div className="text-[11px] text-slate-500">Today</div>
+            <div className="text-sm font-semibold text-slate-900">
+              {currency(dayTotal)}{' '}
+              <span className="text-[11px] text-slate-500 font-normal">
+                · {dayCount} sale{dayCount !== 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -28,11 +53,14 @@ export default function Navbar({ shift, lastInvoice, onCloseShift, onDrafts, onR
             <Printer size={16} /> Print last
           </button>
         )}
+        <button onClick={onSettings} className="navbtn" title="POS settings">
+          <SettingsIcon size={16} /> Settings
+        </button>
         <button onClick={onCloseShift} className="navbtn navbtn-danger">
           <LogOut size={16} /> Close shift
         </button>
 
-        <div className="hidden md:flex items-center text-xs text-slate-500 pl-3 border-l border-slate-200">
+        <div className="hidden xl:flex items-center text-xs text-slate-500 pl-3 border-l border-slate-200">
           <ShoppingCart size={14} className="mr-1.5" />
           Opened {formatDate(shift.openedAt)}
         </div>

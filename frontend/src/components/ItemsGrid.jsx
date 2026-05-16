@@ -3,7 +3,7 @@ import { Search, Barcode, LayoutGrid, List } from 'lucide-react';
 import { items, categories } from '../data/mockData';
 import { currency } from '../utils/format';
 
-export default function ItemsGrid({ onAdd }) {
+export default function ItemsGrid({ onAdd, stockMap = {}, settings = {} }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [view, setView] = useState('grid');
@@ -14,10 +14,13 @@ export default function ItemsGrid({ onAdd }) {
     searchRef.current?.focus();
   }, []);
 
+  const stockFor = (id) => (stockMap[id] != null ? stockMap[id] : 0);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((it) => {
       if (category !== 'All' && it.category !== category) return false;
+      if (settings.hideOutOfStock && stockFor(it.id) <= 0) return false;
       if (!q) return true;
       return (
         it.name.toLowerCase().includes(q) ||
@@ -25,14 +28,20 @@ export default function ItemsGrid({ onAdd }) {
         it.barcode.includes(q)
       );
     });
-  }, [query, category]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, category, settings.hideOutOfStock, stockMap]);
+
+  function handleAdd(it) {
+    if (stockFor(it.id) <= 0) return;
+    onAdd(it);
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!barcodeMode) return;
     const match = items.find((i) => i.barcode === query.trim());
     if (match) {
-      onAdd(match);
+      handleAdd(match);
       setQuery('');
     }
   }
@@ -100,53 +109,78 @@ export default function ItemsGrid({ onAdd }) {
           </div>
         ) : view === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filtered.map((it) => (
-              <button
-                key={it.id}
-                onClick={() => onAdd(it)}
-                className="text-left bg-white rounded-xl border border-slate-200 p-3 hover:border-brand-500 hover:shadow-md transition active:scale-[0.98]"
-              >
-                <div className="aspect-square rounded-lg bg-slate-50 grid place-items-center text-4xl mb-2">
-                  {it.emoji}
-                </div>
-                <div className="text-sm font-medium text-slate-900 line-clamp-2">
-                  {it.name}
-                </div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-sm font-bold text-brand-700">
-                    {currency(it.price)}
-                  </span>
-                  <span
-                    className={`text-[11px] ${
-                      it.stock < 20 ? 'text-amber-600' : 'text-slate-400'
-                    }`}
-                  >
-                    {it.stock} in stock
-                  </span>
-                </div>
-              </button>
-            ))}
+            {filtered.map((it) => {
+              const stock = stockFor(it.id);
+              const oos = stock <= 0;
+              return (
+                <button
+                  key={it.id}
+                  onClick={() => handleAdd(it)}
+                  disabled={oos}
+                  className={`text-left bg-white rounded-xl border p-3 transition active:scale-[0.98] ${
+                    oos
+                      ? 'border-slate-200 opacity-50 cursor-not-allowed'
+                      : 'border-slate-200 hover:border-brand-500 hover:shadow-md'
+                  }`}
+                >
+                  <div className="relative aspect-square rounded-lg bg-slate-50 grid place-items-center text-4xl mb-2">
+                    {it.emoji}
+                    {oos && (
+                      <span className="absolute top-1 left-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                        Out of stock
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm font-medium text-slate-900 line-clamp-2">
+                    {it.name}
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm font-bold text-brand-700">
+                      {currency(it.price)}
+                    </span>
+                    <span
+                      className={`text-[11px] ${
+                        oos
+                          ? 'text-rose-600 font-semibold'
+                          : stock < 20
+                          ? 'text-amber-600'
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {stock} in stock
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-            {filtered.map((it) => (
-              <button
-                key={it.id}
-                onClick={() => onAdd(it)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 text-left"
-              >
-                <span className="text-2xl">{it.emoji}</span>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-slate-900">{it.name}</div>
-                  <div className="text-xs text-slate-500">
-                    {it.code} · {it.category}
+            {filtered.map((it) => {
+              const stock = stockFor(it.id);
+              const oos = stock <= 0;
+              return (
+                <button
+                  key={it.id}
+                  onClick={() => handleAdd(it)}
+                  disabled={oos}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left ${
+                    oos ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-2xl">{it.emoji}</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-slate-900">{it.name}</div>
+                    <div className="text-xs text-slate-500">
+                      {it.code} · {it.category} · {stock} in stock
+                    </div>
                   </div>
-                </div>
-                <div className="text-sm font-bold text-brand-700">
-                  {currency(it.price)}
-                </div>
-              </button>
-            ))}
+                  <div className="text-sm font-bold text-brand-700">
+                    {currency(it.price)}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

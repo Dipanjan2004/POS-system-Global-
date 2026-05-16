@@ -47,13 +47,25 @@ export const items = [
 ];
 
 export const customers = [
-  { id: 'CUST-0001', name: 'Walk-in Customer', mobile: '', email: '', group: 'Retail' },
-  { id: 'CUST-0002', name: 'Aarav Sharma', mobile: '+91 98100 11122', email: 'aarav@example.com', group: 'Retail' },
-  { id: 'CUST-0003', name: 'Sapphire Ventures', mobile: '+91 98203 44556', email: 'ap@sapphire.co', group: 'Corporate' },
-  { id: 'CUST-0004', name: 'Priya Iyer', mobile: '+91 99880 12345', email: 'priya@example.com', group: 'Retail' },
-  { id: 'CUST-0005', name: 'Northwind Cafe', mobile: '+91 91111 22334', email: 'orders@northwind.cafe', group: 'Wholesale' },
-  { id: 'CUST-0006', name: 'Daniel Cohen', mobile: '+91 87654 33221', email: 'dan@example.com', group: 'Retail' },
+  { id: 'CUST-0001', name: 'Walk-in Customer', mobile: '', email: '', group: 'Retail', discount: 0 },
+  { id: 'CUST-0002', name: 'Aarav Sharma', mobile: '+91 98100 11122', email: 'aarav@example.com', group: 'Retail', discount: 5 },
+  { id: 'CUST-0003', name: 'Sapphire Ventures', mobile: '+91 98203 44556', email: 'ap@sapphire.co', group: 'Corporate', discount: 12 },
+  { id: 'CUST-0004', name: 'Priya Iyer', mobile: '+91 99880 12345', email: 'priya@example.com', group: 'Retail', discount: 0 },
+  { id: 'CUST-0005', name: 'Northwind Cafe', mobile: '+91 91111 22334', email: 'orders@northwind.cafe', group: 'Wholesale', discount: 15 },
+  { id: 'CUST-0006', name: 'Daniel Cohen', mobile: '+91 87654 33221', email: 'dan@example.com', group: 'Retail', discount: 0 },
 ];
+
+export const defaultSettings = {
+  allowEditRate: true,
+  maxDiscount: 25,
+  hideOutOfStock: false,
+  taxInclusive: false,
+  allowPartial: false,
+  applyCustomerDiscount: true,
+  storeName: 'POS Awesome',
+  storeAddress: '123 Main Street · Anywhere',
+  receiptFooter: 'Thank you for shopping with us!',
+};
 
 export const paymentModes = [
   { id: 'cash', label: 'Cash', icon: 'Banknote', isCash: true },

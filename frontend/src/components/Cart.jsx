@@ -1,9 +1,13 @@
-import { User, Plus, Minus, Trash2, Percent, StickyNote, PauseCircle, CreditCard } from 'lucide-react';
+import { User, Plus, Minus, Trash2, Percent, StickyNote, PauseCircle, CreditCard, BadgePercent, DollarSign } from 'lucide-react';
 import { currency } from '../utils/format';
 
 export default function Cart({ pos, onPickCustomer, onPay, showPayButton }) {
   const { state, totals, updateLine, removeLine, setInvoiceDiscount, setNotes, holdInvoice, clearCart } = pos;
+  const { settings, customer } = state;
   const empty = state.lines.length === 0;
+  const maxDisc = settings.maxDiscount ?? 100;
+  const customerDiscount = settings.applyCustomerDiscount ? customer?.discount || 0 : 0;
+  const clampDiscount = (v) => Math.max(0, Math.min(maxDisc, parseFloat(v) || 0));
 
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -16,8 +20,13 @@ export default function Cart({ pos, onPickCustomer, onPay, showPayButton }) {
             <User size={18} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-slate-900 truncate">
+            <div className="text-sm font-medium text-slate-900 truncate flex items-center gap-1.5">
               {state.customer.name}
+              {customerDiscount > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  <BadgePercent size={10} /> {customerDiscount}% off
+                </span>
+              )}
             </div>
             <div className="text-xs text-slate-500 truncate">
               {state.customer.mobile || 'Tap to change customer'}
@@ -79,14 +88,29 @@ export default function Cart({ pos, onPickCustomer, onPay, showPayButton }) {
                         <Plus size={14} />
                       </button>
                     </div>
-                    <div className="relative">
+                    {settings.allowEditRate && (
+                      <div className="relative" title="Edit unit price">
+                        <DollarSign size={12} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={l.price}
+                          onChange={(e) =>
+                            updateLine(l.id, { price: parseFloat(e.target.value) || 0 })
+                          }
+                          className="w-20 pl-5 pr-1 py-1 text-sm rounded-lg border border-slate-200"
+                        />
+                      </div>
+                    )}
+                    <div className="relative" title={`Discount (max ${maxDisc}%)`}>
                       <input
                         type="number"
                         min="0"
-                        max="100"
+                        max={maxDisc}
                         value={l.discount || 0}
                         onChange={(e) =>
-                          updateLine(l.id, { discount: parseFloat(e.target.value) || 0 })
+                          updateLine(l.id, { discount: clampDiscount(e.target.value) })
                         }
                         className="w-16 pr-5 pl-2 py-1 text-sm rounded-lg border border-slate-200"
                       />
@@ -121,12 +145,15 @@ export default function Cart({ pos, onPickCustomer, onPay, showPayButton }) {
           <input
             type="number"
             min="0"
-            max="100"
+            max={maxDisc}
             value={state.invoiceDiscount}
-            onChange={(e) => setInvoiceDiscount(parseFloat(e.target.value) || 0)}
+            onChange={(e) => setInvoiceDiscount(clampDiscount(e.target.value))}
             className="w-16 px-2 py-1 text-sm rounded border border-slate-200 bg-white"
           />
           <span className="text-sm text-slate-500">%</span>
+          {maxDisc < 100 && (
+            <span className="text-[11px] text-slate-400 ml-auto">max {maxDisc}%</span>
+          )}
         </div>
 
         <div className="pt-2 border-t border-slate-200 space-y-1 text-sm">

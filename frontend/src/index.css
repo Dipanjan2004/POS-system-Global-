@@ -13,18 +13,30 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.receipt-print {
+  display: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
+  }
+  .receipt-print {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 4mm;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #000;
   }
   .receipt-print,
   .receipt-print * {
     visibility: visible;
   }
-  .receipt-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
+  @page {
+    size: 80mm auto;
+    margin: 0;
   }
 }

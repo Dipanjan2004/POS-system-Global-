@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Banknote, CreditCard, Smartphone, Wallet, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Banknote, CreditCard, Smartphone, Wallet, CheckCircle2, Printer, Receipt as ReceiptIcon } from 'lucide-react';
 import { paymentModes } from '../data/mockData';
 import { currency } from '../utils/format';
 
@@ -7,7 +7,10 @@ const icons = { Banknote, CreditCard, Smartphone, Wallet };
 
 export default function PaymentScreen({ pos, onBack, onSubmitted }) {
   const { state, totals, submitInvoice } = pos;
+  const { settings } = state;
   const grand = totals.grandTotal;
+
+  const [submittedInvoice, setSubmittedInvoice] = useState(null);
 
   const [allocations, setAllocations] = useState(() =>
     paymentModes.reduce((acc, m, i) => {
@@ -28,7 +31,10 @@ export default function PaymentScreen({ pos, onBack, onSubmitted }) {
   );
 
   const change = totalPaid - grand;
-  const canSubmit = totalPaid >= grand && state.lines.length > 0;
+  const outstanding = Math.max(0, grand - totalPaid);
+  const canSubmit =
+    state.lines.length > 0 &&
+    (totalPaid >= grand || (settings.allowPartial && totalPaid > 0));
 
   function setAmount(id, v) {
     setAllocations({ ...allocations, [id]: parseFloat(v) || 0 });
@@ -52,9 +58,25 @@ export default function PaymentScreen({ pos, onBack, onSubmitted }) {
         .map((m) => ({ mode: m.label, amount: parseFloat(allocations[m.id]) || 0 }))
         .filter((p) => p.amount > 0),
       change: Math.max(0, change),
+      outstanding,
     };
     submitInvoice(invoice);
+    setSubmittedInvoice(invoice);
+  }
+
+  function finishSale() {
+    setSubmittedInvoice(null);
     onSubmitted();
+  }
+
+  if (submittedInvoice) {
+    return (
+      <SuccessScreen
+        invoice={submittedInvoice}
+        onPrint={() => window.print()}
+        onDone={finishSale}
+      />
+    );
   }
 
   return (
@@ -129,7 +151,9 @@ export default function PaymentScreen({ pos, onBack, onSubmitted }) {
 
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-slate-600">Amount due</span>
+            <span className="text-slate-600">
+              Amount due {settings.taxInclusive && <span className="text-[11px] text-slate-400">(incl. tax)</span>}
+            </span>
             <span className="font-semibold">{currency(grand)}</span>
           </div>
           <div className="flex items-center justify-between">
@@ -138,7 +162,7 @@ export default function PaymentScreen({ pos, onBack, onSubmitted }) {
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-slate-200">
             <span className="font-semibold text-slate-900">
-              {change >= 0 ? 'Change' : 'Outstanding'}
+              {change >= 0 ? 'Change' : settings.allowPartial ? 'Outstanding (partial)' : 'Outstanding'}
             </span>
             <span
               className={`text-xl font-bold ${
@@ -148,6 +172,11 @@ export default function PaymentScreen({ pos, onBack, onSubmitted }) {
               {currency(Math.abs(change))}
             </span>
           </div>
+          {settings.allowPartial && change < 0 && (
+            <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mt-2">
+              Partial payment enabled — invoice will submit with an outstanding balance.
+            </div>
+          )}
         </div>
       </div>
 
@@ -162,6 +191,66 @@ export default function PaymentScreen({ pos, onBack, onSubmitted }) {
           <span className="opacity-75 text-sm">
             (<kbd className="bg-white/20 px-1.5 rounded">Ctrl+X</kbd>)
           </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SuccessScreen({ invoice, onPrint, onDone }) {
+  return (
+    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center text-center">
+        <div className="w-24 h-24 rounded-full bg-emerald-100 grid place-items-center mb-4 animate-[pulse_1.5s_ease-in-out_1]">
+          <CheckCircle2 size={64} className="text-emerald-600" strokeWidth={2.5} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">Payment Successful</h2>
+        <p className="text-slate-500 mb-6">Invoice {invoice.id}</p>
+
+        <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-600">Customer</span>
+            <span className="font-medium text-slate-900">{invoice.customer.name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-600">Total paid</span>
+            <span className="font-medium text-slate-900">{currency(invoice.totals.grandTotal)}</span>
+          </div>
+          {invoice.payments.map((p, i) => (
+            <div key={i} className="flex justify-between text-xs text-slate-500">
+              <span>{p.mode}</span>
+              <span>{currency(p.amount)}</span>
+            </div>
+          ))}
+          {invoice.change > 0 && (
+            <div className="flex justify-between pt-2 border-t border-slate-200">
+              <span className="font-semibold text-slate-900">Change due</span>
+              <span className="font-bold text-emerald-600">{currency(invoice.change)}</span>
+            </div>
+          )}
+          {invoice.outstanding > 0 && (
+            <div className="flex justify-between pt-2 border-t border-slate-200">
+              <span className="font-semibold text-slate-900">Outstanding</span>
+              <span className="font-bold text-amber-700">{currency(invoice.outstanding)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-3 border-t border-slate-200 bg-white grid grid-cols-2 gap-2">
+        <button
+          onClick={onPrint}
+          className="py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 inline-flex items-center justify-center gap-2"
+        >
+          <Printer size={18} />
+          Print Receipt
+        </button>
+        <button
+          onClick={onDone}
+          className="py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 inline-flex items-center justify-center gap-2"
+        >
+          <ReceiptIcon size={18} />
+          New Sale
         </button>
       </div>
     </div>
